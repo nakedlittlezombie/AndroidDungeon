@@ -1,0 +1,6 @@
+{
+  "name": "PANEL Comic Archive & Library Engine",
+  "description": "Gallery-grade comic book cataloging, local metadata harvesting, archival reading, and remote download synchronization system.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
