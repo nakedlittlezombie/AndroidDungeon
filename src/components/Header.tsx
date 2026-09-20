@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { NavigationTab } from '../types';
+import { NavigationTab, AIConfig } from '../types';
 import { ASSETS } from '../data/mockDatabase';
-import { Search, Lock, RefreshCw, Layers } from 'lucide-react';
+import { Search, Lock, RefreshCw, Layers, Sparkles, Cpu } from 'lucide-react';
 
 interface HeaderProps {
   currentTab: NavigationTab;
@@ -9,6 +9,7 @@ interface HeaderProps {
   onOpenSearch: () => void;
   onLockVault: () => void;
   activeTransfersCount: number;
+  aiConfig?: AIConfig;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -16,9 +17,21 @@ export const Header: React.FC<HeaderProps> = ({
   onNavigate,
   onOpenSearch,
   onLockVault,
-  activeTransfersCount
+  activeTransfersCount,
+  aiConfig
 }) => {
   const [profileOpen, setProfileOpen] = useState(false);
+
+  const getAiModelLabel = () => {
+    if (!aiConfig) return 'SmolVLM';
+    if (aiConfig.providerMode === 'openai_compatible') {
+      return aiConfig.openaiModel.split(':')[0];
+    }
+    if (aiConfig.providerMode === 'local_downloaded') {
+      return aiConfig.selectedLocalModelId.replace('-500m', '').replace('-1.8b', '').toUpperCase();
+    }
+    return 'Archival AI';
+  };
 
   return (
     <header className="fixed top-0 left-0 right-0 z-40 h-16 bg-[#0e0e0e]/95 backdrop-blur-xl border-b border-[#262626]">
@@ -98,16 +111,27 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Right Section: Quick Search, Queue Indicator, Curator Profile */}
         <div className="flex items-center gap-3 sm:gap-4">
           
-          {/* Quick Search ⌘K */}
+          {/* Archival AI Omni-Bar (Replaces static search bar) */}
           <button
             onClick={onOpenSearch}
-            className="hidden sm:flex items-center gap-2 bg-[#0f0e0e] border border-[#262626] hover:border-[#444748] rounded px-3 py-1.5 transition-colors cursor-pointer group"
+            className="flex items-center gap-2 sm:gap-2.5 bg-[#141313] hover:bg-[#1a1919] border border-[#2d2c2c] hover:border-purple-500/50 rounded-xl px-2.5 sm:px-3.5 py-1.5 transition-all cursor-pointer group shadow-inner"
+            title="Open Archival AI Copilot (⌘K)"
           >
-            <Search className="w-4 h-4 text-[#8e9192] group-hover:text-white transition-colors" />
-            <span className="font-body-sm text-xs text-[#8e9192] pr-3 group-hover:text-[#c4c7c8]">
-              Search archival catalog...
-            </span>
-            <kbd className="font-mono-caption text-[10px] text-[#c4c7c8] bg-[#2b2a2a] px-1.5 py-0.5 rounded border border-[#262626]">
+            <div className="w-5 h-5 rounded-md bg-purple-950/60 border border-purple-500/30 flex items-center justify-center shrink-0 group-hover:border-purple-400/60 transition-colors">
+              <Sparkles className="w-3 h-3 text-purple-300 animate-pulse" />
+            </div>
+
+            <div className="hidden sm:flex items-center gap-2 min-w-0">
+              <span className="font-body-sm text-xs text-[#c4c7c8] group-hover:text-white transition-colors truncate max-w-[190px] lg:max-w-[260px]">
+                Ask AI about library, queue, vision...
+              </span>
+              <span className="hidden lg:inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[9px] font-mono text-emerald-400 bg-[#1c1b1b] border border-[#2b2a2a]">
+                <span className="w-1 h-1 rounded-full bg-emerald-400"></span>
+                {getAiModelLabel()}
+              </span>
+            </div>
+
+            <kbd className="font-mono-caption text-[10px] text-[#8e9192] group-hover:text-[#c4c7c8] bg-[#222121] px-1.5 py-0.5 rounded border border-[#2b2a2a] shrink-0 ml-1">
               ⌘K
             </kbd>
           </button>

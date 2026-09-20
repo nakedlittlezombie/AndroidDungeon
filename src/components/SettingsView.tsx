@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
-import { SystemSettings } from '../types';
+import React, { useState, useEffect } from 'react';
+import { SystemSettings, AIConfig, AIProviderMode } from '../types';
 import { INITIAL_SETTINGS } from '../data/mockDatabase';
+import { LOCAL_MODELS_CATALOG, INITIAL_AI_CONFIG } from '../services/aiService';
+import { AISettingsPanel } from './AISettingsPanel';
 import { 
   Database, 
   HardDrive, 
@@ -15,18 +17,41 @@ import {
   ExternalLink,
   BookOpen,
   Layers,
-  Cpu
+  Cpu,
+  Sparkles,
+  Download,
+  Play,
+  Trash2,
+  Key,
+  AlertCircle
 } from 'lucide-react';
 
 interface SettingsViewProps {
   onSave?: () => void;
+  aiConfig?: AIConfig;
+  onUpdateAIConfig?: (config: AIConfig) => void;
+  initialSubTab?: string;
 }
 
-export const SettingsView: React.FC<SettingsViewProps> = ({ onSave }) => {
+export const SettingsView: React.FC<SettingsViewProps> = ({ 
+  onSave, 
+  aiConfig: parentAIConfig, 
+  onUpdateAIConfig,
+  initialSubTab = 'ai'
+}) => {
   const [settings, setSettings] = useState<SystemSettings>(INITIAL_SETTINGS);
-  const [activeSubTab, setActiveSubTab] = useState('metadata');
+  const [activeSubTab, setActiveSubTab] = useState(initialSubTab);
   const [isSavedToast, setIsSavedToast] = useState(false);
   const [testingClient, setTestingClient] = useState(false);
+
+  // Local AI State
+  const [localAIConfig, setLocalAIConfig] = useState<AIConfig>(parentAIConfig || INITIAL_AI_CONFIG);
+
+  useEffect(() => {
+    if (parentAIConfig) {
+      setLocalAIConfig(parentAIConfig);
+    }
+  }, [parentAIConfig]);
 
   const handleTestLink = () => {
     setTestingClient(true);
@@ -88,8 +113,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onSave }) => {
         <div className="md:col-span-3 flex flex-col gap-2">
           <div className="bg-[#1c1b1b] border border-[#262626] rounded-xl p-2 flex flex-col gap-1">
             {[
-              { id: 'general', label: 'General & Paths' },
+              { id: 'ai', label: 'AI Engine & Vision', isAi: true },
               { id: 'metadata', label: 'Metadata & Local DBs' },
+              { id: 'general', label: 'General & Paths' },
               { id: 'indexers', label: 'Indexers & Downloaders' },
               { id: 'reader', label: 'Reader & Display' },
               { id: 'storage', label: 'Storage & Mounts' },
@@ -98,13 +124,25 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onSave }) => {
               <button
                 key={tab.id}
                 onClick={() => setActiveSubTab(tab.id)}
-                className={`text-left px-3.5 py-2 rounded-lg text-xs font-medium cursor-pointer transition-colors ${
+                className={`text-left px-3.5 py-2 rounded-lg text-xs font-medium cursor-pointer transition-colors flex items-center justify-between ${
                   activeSubTab === tab.id
                     ? 'bg-white text-black font-semibold shadow'
                     : 'text-[#c4c7c8] hover:text-white hover:bg-[#201f1f]'
                 }`}
               >
-                {tab.label}
+                <div className="flex items-center gap-2">
+                  {tab.isAi && <Sparkles className={`w-3.5 h-3.5 ${activeSubTab === tab.id ? 'text-purple-600' : 'text-purple-400'}`} />}
+                  <span>{tab.label}</span>
+                </div>
+                {tab.isAi && (
+                  <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded font-bold ${
+                    activeSubTab === tab.id 
+                      ? 'bg-purple-950 text-purple-200' 
+                      : 'bg-purple-900/60 text-purple-300 border border-purple-700/50'
+                  }`}>
+                    ACTIVE
+                  </span>
+                )}
               </button>
             ))}
           </div>
@@ -129,8 +167,17 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onSave }) => {
 
         {/* Right Settings Form Container */}
         <div className="md:col-span-9 flex flex-col gap-6">
-          
-          {/* Section 1: Metadata Harvesting & Index Caches (Image 1) */}
+          {activeSubTab === 'ai' ? (
+            <AISettingsPanel
+              aiConfig={localAIConfig}
+              onUpdateAIConfig={(newConfig) => {
+                setLocalAIConfig(newConfig);
+                onUpdateAIConfig?.(newConfig);
+              }}
+            />
+          ) : (
+            <>
+              {/* Section 1: Metadata Harvesting & Index Caches (Image 1) */}
           <div className="bg-[#1c1b1b] border border-[#262626] rounded-xl p-5 sm:p-6 flex flex-col gap-5">
             <div>
               <span className="font-mono-caption text-[10px] text-white uppercase tracking-wider block">
@@ -514,6 +561,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onSave }) => {
               </div>
             </div>
           </div>
+            </>
+          )}
 
         </div>
       </div>

@@ -20,19 +20,23 @@ import {
   HardDrive, 
   Activity, 
   Wifi, 
-  ExternalLink 
+  ExternalLink,
+  Sparkles,
+  Cpu
 } from 'lucide-react';
 
 interface DownloadsViewProps {
   initialSearchQuery?: string;
   onTransferCompleted?: (title: string) => void;
   onMoveToLibrary?: () => void;
+  onOpenAICopilot?: (initialPrompt?: string) => void;
 }
 
 export const DownloadsView: React.FC<DownloadsViewProps> = ({
   initialSearchQuery = '',
   onTransferCompleted,
-  onMoveToLibrary
+  onMoveToLibrary,
+  onOpenAICopilot
 }) => {
   const [activeTransfers, setActiveTransfers] = useState<ActiveTransfer[]>(INITIAL_ACTIVE_TRANSFERS);
   const [completedIngests, setCompletedIngests] = useState<CompletedIngest[]>(INITIAL_COMPLETED_INGESTS);
@@ -41,6 +45,49 @@ export const DownloadsView: React.FC<DownloadsViewProps> = ({
   const [harvesterResults, setHarvesterResults] = useState<HarvesterResult[]>([]);
   const [throttle, setThrottle] = useState('unlimited');
   const [allPaused, setAllPaused] = useState(false);
+  const [aiNaturalPrompt, setAiNaturalPrompt] = useState('');
+  const [aiProcessing, setAiProcessing] = useState(false);
+  const [aiQueueSuccessMsg, setAiQueueSuccessMsg] = useState<string | null>(null);
+
+  const handleExecuteAIQueue = (promptText: string) => {
+    const text = promptText.trim();
+    if (!text) return;
+    setAiProcessing(true);
+    setAiQueueSuccessMsg(null);
+
+    setTimeout(() => {
+      setAiProcessing(false);
+      setAiNaturalPrompt('');
+
+      const newTransfer: ActiveTransfer = {
+        id: `ai-queue-${Date.now()}`,
+        title: text.toLowerCase().includes('saga') 
+          ? 'Saga #61 (2024) [CBZ Lossless Master]'
+          : 'The Sandman #22 Season of Mists (1990) [CBZ]',
+        creatorsPublisher: text.toLowerCase().includes('saga')
+          ? 'Brian K. Vaughan, Fiona Staples · Image Comics'
+          : 'Neil Gaiman, Kelley Jones · DC Vertigo',
+        source: 'SOURCE: AI USENET INGRESS',
+        priority: 'HIGH',
+        currentBytes: '18.4 MB',
+        totalBytes: '112.5 MB',
+        percentage: 16,
+        speed: '42.8 MB/s',
+        eta: 'ETA 45s',
+        chunkProgress: 'Chunk 160 / 1,000',
+        securityNote: 'AI Ingress Pipeline · SHA256 Queued',
+        coverUrl: text.toLowerCase().includes('saga')
+          ? 'https://lh3.googleusercontent.com/aida-public/AB6AXuB8L62r1BAZzL_kp9DFxdb2r7nt9ANH94yZ6lG2lpjFf_5oUNaq_zL6NzvjIqYWTj1W5HFNFI0DwTcsieZVSL2eBqRxlBLMTZYnZvZtldfpv_tYN2f8KETI1dgt35P82qEzMN3TOORLLlWVYQ4up-wobe-LtSMAFg-Ka3tkICzrbSjIEiGWhuDZ7qPHngEZIFWoho8FXxh1wRU1FZA1cd0nZAwkFooTs-q2r-tv6X2UvXnWdde6dxw'
+          : 'https://lh3.googleusercontent.com/aida-public/AB6AXuCYxzJvAIUP6oMNHIlsU9yAayHKvJepuBAybZU7HppJGpiNtI5EOX2-CE7vnMGiYOJPb7sJwuL1aFYtjQCOlhCL5M_BAq4vsVHoSskp-eHmbeaDqv53Kjl1HbbqXR11g_NEmYv9BxuT2RkMGBwQugJ9_4pP3bcDNR1l971h9Gu1H2d9_oxsQiYrpCPKrgATQj3F79_pB9k0Zywa2NFcUNUR3uTx8FhlZE8M9yH7N_M8niIrQC4jYEc',
+        formatBadge: 'CBZ',
+        paused: false
+      };
+
+      setActiveTransfers(prev => [newTransfer, ...prev]);
+      setAiQueueSuccessMsg(`Queued: ${newTransfer.title} via Archival AI Ingress`);
+      setTimeout(() => setAiQueueSuccessMsg(null), 4000);
+    }, 700);
+  };
 
   // Auto-search if initial search query is provided
   useEffect(() => {
@@ -187,6 +234,85 @@ export const DownloadsView: React.FC<DownloadsViewProps> = ({
               <option value="night">Night Sync: 10 MB/s</option>
             </select>
           </div>
+        </div>
+      </div>
+
+      {/* Archival AI Queue Copilot Omni-Input */}
+      <div className="bg-[#141313] border border-purple-900/60 rounded-xl p-4 sm:p-5 flex flex-col gap-3 shadow-md relative overflow-hidden">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-lg bg-purple-950/80 border border-purple-600/60 flex items-center justify-center">
+              <Sparkles className="w-3.5 h-3.5 text-purple-300 animate-pulse" />
+            </div>
+            <div>
+              <span className="font-mono-caption text-[10px] text-purple-300 uppercase tracking-wider block">
+                ARCHIVAL AI COPILOT · NATURAL LANGUAGE INGRESS QUEUE
+              </span>
+              <span className="text-xs text-white font-medium">
+                Command the AI to search indexers, verify quality, and queue missing volumes
+              </span>
+            </div>
+          </div>
+
+          {onOpenAICopilot && (
+            <button
+              onClick={() => onOpenAICopilot('Queue missing issues in my library')}
+              className="text-xs text-purple-300 hover:text-white flex items-center gap-1 font-mono transition-colors cursor-pointer"
+            >
+              <span>Full Copilot Terminal</span>
+              <ExternalLink className="w-3 h-3" />
+            </button>
+          )}
+        </div>
+
+        {/* AI Input Row */}
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <Sparkles className="w-4 h-4 text-purple-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={aiNaturalPrompt}
+              onChange={(e) => setAiNaturalPrompt(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleExecuteAIQueue(aiNaturalPrompt)}
+              placeholder="e.g., 'Queue missing Sandman Season of Mists chapters' or 'Find Saga volume 10 in high resolution'..."
+              className="w-full bg-[#0a0a0a] border border-purple-900/40 focus:border-purple-500 rounded-lg pl-10 pr-4 py-2.5 text-xs text-white placeholder-[#8e9192] outline-none transition-colors font-mono"
+            />
+          </div>
+
+          <button
+            onClick={() => handleExecuteAIQueue(aiNaturalPrompt)}
+            disabled={aiProcessing || !aiNaturalPrompt.trim()}
+            className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-semibold py-2.5 px-4 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer shadow disabled:opacity-50 shrink-0 active:scale-95"
+          >
+            <Cpu className={`w-3.5 h-3.5 ${aiProcessing ? 'animate-spin' : ''}`} />
+            <span>{aiProcessing ? 'Dispatching...' : 'AI Queue Dispatch'}</span>
+          </button>
+        </div>
+
+        {/* Quick Sample Commands & Success Feedback */}
+        <div className="flex items-center justify-between flex-wrap gap-2 text-[11px]">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[#8e9192]">Suggested:</span>
+            <button
+              onClick={() => handleExecuteAIQueue('Queue Sandman #22 Season of Mists')}
+              className="px-2 py-0.5 rounded bg-[#1c1b1b] hover:bg-[#252424] border border-[#2b2a2a] text-[#c4c7c8] hover:text-white transition-colors cursor-pointer"
+            >
+              &quot;Queue Sandman #22&quot;
+            </button>
+            <button
+              onClick={() => handleExecuteAIQueue('Queue Saga #61 Zone-Empire')}
+              className="px-2 py-0.5 rounded bg-[#1c1b1b] hover:bg-[#252424] border border-[#2b2a2a] text-[#c4c7c8] hover:text-white transition-colors cursor-pointer"
+            >
+              &quot;Queue Saga #61&quot;
+            </button>
+          </div>
+
+          {aiQueueSuccessMsg && (
+            <div className="flex items-center gap-1.5 text-emerald-400 font-mono text-[11px] bg-emerald-950/60 border border-emerald-800/80 px-2.5 py-0.5 rounded animate-fade-in">
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              <span>{aiQueueSuccessMsg}</span>
+            </div>
+          )}
         </div>
       </div>
 

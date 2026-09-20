@@ -152,3 +152,78 @@ export interface SystemSettings {
   readingFlowDirection: 'ltr' | 'rtl';
   lookaheadFrameCache: number;
 }
+
+export type AIProviderMode = 'openai_compatible' | 'local_downloaded' | 'demo_neural' | 'builtin_rules';
+
+export interface LocalModelDefinition {
+  id: string;
+  name: string;
+  architecture: string;
+  parameterCount: string;
+  sizeFormatted: string;
+  sizeBytes: number;
+  sizeMb: number;
+  visionEnabled: boolean;
+  description: string;
+  vramRequirement: string;
+  vramRequiredMb: number;
+  quantization: string;
+  recommendedTask: string;
+}
+
+export interface AIConfig {
+  providerMode: AIProviderMode;
+  // OpenAI compatible endpoint configuration
+  openaiEndpoint: string; // e.g. http://localhost:11434/v1 or https://api.openai.com/v1
+  openaiBaseUrl?: string; // alias
+  openaiApiKey: string;
+  openaiModel: string; // e.g. 'llama3.2-vision:11b', 'gpt-4o-mini', 'qwen2.5-vl:7b'
+  temperature: number;
+  visionEnabled: boolean;
+  systemPrompt?: string;
+  
+  // Local Downloaded Model configuration
+  selectedLocalModelId: string;
+  localModelsDownloaded: Record<string, boolean>; // modelId -> true/false
+  downloadedModels?: string[]; // list of model ids
+  localModelLoadProgress: number; // 0-100%
+  isDownloadingModel: boolean;
+  downloadSpeed: string;
+  isModelLoadedInVram: boolean;
+  allocatedVramMb: number;
+
+  // Features & Scraping Heuristics
+  autoVisionScraping: boolean;
+  naturalLanguageDownloads?: boolean;
+  extractBarcodesWithVision: boolean;
+  ocrArtistSignatures: boolean;
+}
+
+export interface AIMessageAction {
+  label: string;
+  actionType: 'queue_download' | 'filter_library' | 'open_reader' | 'navigate_tab' | 'resolve_conflict' | 'inspect_vision';
+  payload?: any;
+}
+
+export interface AIVisionDetection {
+  detectedTitle: string;
+  detectedIssueNum: string;
+  detectedPublisher: string;
+  detectedVariant: string;
+  detectedCoverArtist?: string;
+  upcBarcode?: string;
+  visualTags: string[];
+  confidence: number;
+  summary: string;
+}
+
+export interface AIMessage {
+  id: string;
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  timestamp: string;
+  imageUrl?: string;
+  imageFileName?: string;
+  visionResult?: AIVisionDetection;
+  suggestedActions?: AIMessageAction[];
+}

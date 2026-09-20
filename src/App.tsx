@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { NavigationTab, IssueItem, SeriesRunItem, ReaderState } from './types';
+import { NavigationTab, IssueItem, SeriesRunItem, ReaderState, AIConfig } from './types';
 import { 
   INITIAL_ISSUES, 
   INITIAL_SERIES, 
   INITIAL_ACTIVE_TRANSFERS 
 } from './data/mockDatabase';
+import { INITIAL_AI_CONFIG } from './services/aiService';
 import { Header } from './components/Header';
 import { VaultLoginModal } from './components/VaultLoginModal';
 import { LibraryView } from './components/LibraryView';
@@ -14,6 +15,7 @@ import { DownloadsView } from './components/DownloadsView';
 import { SettingsView } from './components/SettingsView';
 import { ComicReaderModal } from './components/ComicReaderModal';
 import { CommandPaletteModal } from './components/CommandPaletteModal';
+import { AICopilotModal } from './components/AICopilotModal';
 
 export default function App() {
   const [currentTab, setCurrentTab] = useState<NavigationTab>('library');
@@ -22,6 +24,10 @@ export default function App() {
   const [seriesList, setSeriesList] = useState<SeriesRunItem[]>(INITIAL_SERIES);
   const [activeTransfersCount, setActiveTransfersCount] = useState<number>(INITIAL_ACTIVE_TRANSFERS.length);
   
+  // AI Configuration State
+  const [aiConfig, setAiConfig] = useState<AIConfig>(INITIAL_AI_CONFIG);
+  const [isAICopilotOpen, setIsAICopilotOpen] = useState<boolean>(false);
+
   // Selected issue for Dossier Modal
   const [selectedIssue, setSelectedIssue] = useState<IssueItem | null>(null);
 
@@ -40,15 +46,15 @@ export default function App() {
     flowDirection: 'ltr'
   });
 
-  // Command palette state (⌘K)
+  // Command palette state (optional secondary)
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
 
-  // Keyboard shortcut listener for ⌘K
+  // Keyboard shortcut listener for ⌘K -> Opens AI Copilot directly!
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
-        setCommandPaletteOpen(prev => !prev);
+        setIsAICopilotOpen(prev => !prev);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -85,13 +91,14 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#141313] text-[#e6e1e1] flex flex-col relative selection:bg-white selection:text-black">
       
-      {/* Primary Header */}
+      {/* Primary Header - Replaced static search with Archival AI Copilot */}
       <Header
         currentTab={currentTab}
         onNavigate={(tab) => setCurrentTab(tab)}
-        onOpenSearch={() => setCommandPaletteOpen(true)}
+        onOpenSearch={() => setIsAICopilotOpen(true)}
         onLockVault={() => setIsVaultLocked(true)}
         activeTransfersCount={activeTransfersCount}
+        aiConfig={aiConfig}
       />
 
       {/* Main View Area */}
@@ -127,13 +134,47 @@ export default function App() {
             onMoveToLibrary={() => {
               setCurrentTab('library');
             }}
+            onOpenAICopilot={(prompt) => {
+              setIsAICopilotOpen(true);
+            }}
           />
         )}
 
         {currentTab === 'settings' && (
-          <SettingsView />
+          <SettingsView 
+            aiConfig={aiConfig}
+            onUpdateAIConfig={(updated) => setAiConfig(updated)}
+          />
         )}
       </main>
+
+      {/* Archival AI Copilot Modal (Replaces Search Bar, Q&A, Vision Analysis, Queueing) */}
+      <AICopilotModal
+        isOpen={isAICopilotOpen}
+        onClose={() => setIsAICopilotOpen(false)}
+        issues={issues}
+        seriesList={seriesList}
+        aiConfig={aiConfig}
+        onOpenSettingsAI={() => {
+          setIsAICopilotOpen(false);
+          setCurrentTab('settings');
+        }}
+        onNavigateTab={(tab) => {
+          setIsAICopilotOpen(false);
+          setCurrentTab(tab);
+        }}
+        onSelectIssue={(issue) => {
+          setIsAICopilotOpen(false);
+          setSelectedIssue(issue);
+        }}
+        onOpenReader={(comicTitle, issueLabel, initialPage) => {
+          setIsAICopilotOpen(false);
+          handleOpenReader(comicTitle, issueLabel, initialPage || 1);
+        }}
+        onQueueDownload={(query: string) => {
+          setActiveTransfersCount(prev => prev + 1);
+        }}
+      />
 
       {/* Dossier Modal (Screens 3 & 6 - Image 5, 11) */}
       {selectedIssue && (
@@ -157,7 +198,7 @@ export default function App() {
         onClose={() => setReaderState(prev => ({ ...prev, isOpen: false }))}
       />
 
-      {/* Command Palette (⌘K) Quick Search */}
+      {/* Secondary Quick Filter Palette (Optional) */}
       <CommandPaletteModal
         isOpen={commandPaletteOpen}
         issues={issues}

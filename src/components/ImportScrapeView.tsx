@@ -32,14 +32,65 @@ export const ImportScrapeView: React.FC<ImportScrapeViewProps> = ({ onImportComp
   const [activeEngine, setActiveEngine] = useState('cv-local');
   const [ocrEnabled, setOcrEnabled] = useState(false);
   const [highDpiEnabled, setHighDpiEnabled] = useState(true);
+  const [aiVisionAssistEnabled, setAiVisionAssistEnabled] = useState(true);
   const [isScraping, setIsScraping] = useState(false);
+  const [isVisionAnalyzing, setIsVisionAnalyzing] = useState(false);
+  const [visionInspectionData, setVisionInspectionData] = useState<{
+    analyzed: boolean;
+    variantMatch: string;
+    confidence: number;
+    visualProof: string;
+    barcodeDetected: string;
+    recommendedVariantId: string;
+  }>({
+    analyzed: true,
+    variantMatch: 'Variant B (Alex Ross Painted Virgin 1:25 Retailer Incentive)',
+    confidence: 99.8,
+    visualProof: 'Absence of commercial logo trade dress, barcode block removed on front, signature watercolor strokes match Alex Ross 1:25 retailer incentive.',
+    barcodeDetected: '761941215456 02121',
+    recommendedVariantId: 'cover-b'
+  });
 
   const handleRunScrape = () => {
     setIsScraping(true);
     setTimeout(() => {
       setIsScraping(false);
-      alert('Automated scrape completed against Local Comic Vine SQLite Cache (412k indexed issues). 0 remote API calls made.');
+      alert('Automated scrape completed against Local Comic Vine SQLite Cache (412k indexed issues) with AI Vision validation enabled.');
     }, 900);
+  };
+
+  const handleTriggerVisionAnalysis = () => {
+    setIsVisionAnalyzing(true);
+    setTimeout(() => {
+      setIsVisionAnalyzing(false);
+      setVisionInspectionData({
+        analyzed: true,
+        variantMatch: 'Variant B (Alex Ross Painted Virgin 1:25 Retailer Incentive)',
+        confidence: 99.8,
+        visualProof: 'Absence of commercial logo trade dress, barcode block removed on front, signature watercolor strokes match Alex Ross 1:25 retailer incentive.',
+        barcodeDetected: '761941215456 02121',
+        recommendedVariantId: 'cover-b'
+      });
+      setSelectedVariantId('cover-b');
+    }, 600);
+  };
+
+  const handleApplyVisionMatchAndResolve = () => {
+    if (!selectedConflictItem) return;
+    setStagedItems(prev =>
+      prev.map(item =>
+        item.id === selectedConflictItem.id
+          ? {
+              ...item,
+              status: 'ready',
+              confidenceScore: 99.8,
+              confidenceLabel: '99.8% AI Vision Match (Variant B)',
+              hasConflict: false
+            }
+          : item
+      )
+    );
+    setSelectedConflictItem(null);
   };
 
   const handleResolveConflict = () => {
@@ -181,7 +232,18 @@ export const ImportScrapeView: React.FC<ImportScrapeViewProps> = ({ onImportComp
         </div>
 
         {/* Feature Switches */}
-        <div className="flex items-center gap-4 text-xs select-none">
+        <div className="flex items-center gap-4 text-xs select-none flex-wrap">
+          <label className="flex items-center gap-2 cursor-pointer bg-purple-950/40 border border-purple-900/60 px-2.5 py-1 rounded-lg">
+            <input
+              type="checkbox"
+              checked={aiVisionAssistEnabled}
+              onChange={(e) => setAiVisionAssistEnabled(e.target.checked)}
+              className="accent-purple-400 rounded"
+            />
+            <Sparkles className="w-3.5 h-3.5 text-purple-300" />
+            <span className="text-purple-200 font-medium">AI Vision Assist (SmolVLM / Vision Engine)</span>
+          </label>
+
           <label className="flex items-center gap-2 cursor-pointer">
             <input
               type="checkbox"
@@ -303,12 +365,25 @@ export const ImportScrapeView: React.FC<ImportScrapeViewProps> = ({ onImportComp
 
                   <td className="py-3.5 px-4 text-right">
                     {item.status === 'resolve' ? (
-                      <button
-                        onClick={() => setSelectedConflictItem(item)}
-                        className="bg-amber-400 hover:bg-amber-300 text-black font-semibold text-xs py-1.5 px-3 rounded cursor-pointer transition-colors"
-                      >
-                        Resolve Conflict
-                      </button>
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => {
+                            setSelectedConflictItem(item);
+                            handleTriggerVisionAnalysis();
+                          }}
+                          title="Run AI Vision on Cover Art"
+                          className="px-2.5 py-1.5 rounded bg-purple-950/50 hover:bg-purple-900/60 border border-purple-700/60 text-purple-200 text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+                        >
+                          <Sparkles className="w-3.5 h-3.5 text-purple-300" />
+                          <span>AI Vision Match</span>
+                        </button>
+                        <button
+                          onClick={() => setSelectedConflictItem(item)}
+                          className="bg-amber-400 hover:bg-amber-300 text-black font-semibold text-xs py-1.5 px-3 rounded cursor-pointer transition-colors"
+                        >
+                          Resolve Conflict
+                        </button>
+                      </div>
                     ) : item.status === 'ready' ? (
                       <span className="text-emerald-400 font-mono-caption text-[10px] flex items-center justify-end gap-1">
                         <CheckCircle2 className="w-3.5 h-3.5" />
@@ -434,6 +509,74 @@ export const ImportScrapeView: React.FC<ImportScrapeViewProps> = ({ onImportComp
 
             </div>
 
+          </div>
+
+          {/* AI Vision Model Inspection Card */}
+          <div className="bg-[#121111] border border-purple-900/60 rounded-xl p-4 flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded bg-purple-950/80 border border-purple-600/50 flex items-center justify-center">
+                  <Sparkles className="w-3.5 h-3.5 text-purple-300 animate-pulse" />
+                </div>
+                <div>
+                  <span className="font-mono-caption text-[10px] text-purple-300 uppercase tracking-wider block">
+                    AI VISION INSPECTOR · SMOLVLM (WEBGPU) / INFERENCE ENGINE
+                  </span>
+                  <span className="text-xs font-semibold text-white">
+                    Automated Cover Feature &amp; Variant Verification
+                  </span>
+                </div>
+              </div>
+
+              <button
+                onClick={handleTriggerVisionAnalysis}
+                disabled={isVisionAnalyzing}
+                className="px-2.5 py-1 rounded bg-[#201f1f] hover:bg-[#2b2a2a] border border-[#333333] text-[11px] text-[#c4c7c8] hover:text-white flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
+              >
+                <RefreshCw className={`w-3 h-3 ${isVisionAnalyzing ? 'animate-spin' : ''}`} />
+                <span>{isVisionAnalyzing ? 'Analyzing Pixels...' : 'Re-Run Vision Analysis'}</span>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-[#0a0a0a] border border-[#222222] p-3 rounded-lg text-xs">
+              <div className="flex flex-col gap-1">
+                <span className="font-mono-caption text-[10px] text-[#8e9192] uppercase">Detected Artwork Variant</span>
+                <span className="text-white font-medium">{visionInspectionData.variantMatch}</span>
+                <span className="text-emerald-400 font-mono text-[10px]">
+                  Confidence: {visionInspectionData.confidence}% (Conclusive Match)
+                </span>
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <span className="font-mono-caption text-[10px] text-[#8e9192] uppercase">Visual Artifacts &amp; Proof</span>
+                <p className="text-[#c4c7c8] text-[11px] line-clamp-3">
+                  {visionInspectionData.visualProof}
+                </p>
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <span className="font-mono-caption text-[10px] text-[#8e9192] uppercase">Barcode &amp; Corner OCR</span>
+                <span className="font-mono text-white text-[11px]">
+                  UPC: {visionInspectionData.barcodeDetected}
+                </span>
+                <span className="text-purple-300 font-mono text-[10px]">
+                  Trade Dress: None (Virgin Edition)
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between pt-1">
+              <span className="text-[11px] text-[#8e9192] italic">
+                AI Vision recommends selecting Variant B (Alex Ross 1:25 Retailer Incentive).
+              </span>
+              <button
+                onClick={handleApplyVisionMatchAndResolve}
+                className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-semibold text-xs flex items-center gap-1.5 transition-all shadow-md cursor-pointer active:scale-95"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Auto-Select Detected Variant &amp; Resolve (99.8% Match)</span>
+              </button>
+            </div>
           </div>
 
           {/* Action Row */}
